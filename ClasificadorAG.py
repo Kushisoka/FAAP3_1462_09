@@ -94,8 +94,6 @@ class ClasificadorAG(Clasificador):
 
 		scores = [self.score_entera(cromosoma, self.condiciones_excluyentes(datostrain))**2 for cromosoma in self.cromosomas]
 
-		print(scores)
-
 		# Seleccionar
 
 		fitness = np.asarray(scores)
