@@ -13,10 +13,20 @@ class ClasificadorAG(Clasificador):
 		self.tablas = []
 		self.tam_poblacion = tam_poblacion
 		self.generaciones = generaciones
-		self.reglas_iniciales = 3
+		self.reglas_iniciales = reglas_iniciales
 		self.binaria = binaria
 		self.pc = pc
 		self.pz = pz
+		self.mejor_fitness = []
+		self.promedio_fitness = []
+
+
+#######################################################################################################################################################################
+
+#######		ENTRENAMIENTO	#################################################################################################################################
+
+#######################################################################################################################################################################
+
 
 	def entrenamiento(self, datostrain, atributosDiscretos, diccionario):
 
@@ -85,6 +95,8 @@ class ClasificadorAG(Clasificador):
 
 		scores = [self.score_entera(cromosoma, self.condiciones_excluyentes(datostrain))**2 for cromosoma in self.cromosomas]
 
+		print(scores)
+
 		# Seleccionar
 
 		fitness = np.asarray(scores)
@@ -140,6 +152,12 @@ class ClasificadorAG(Clasificador):
 		poblacion_final = [(self.score_entera(cromosoma, self.condiciones_excluyentes(datostrain)), cromosoma) for cromosoma in merged]
 		poblacion_final.sort(reverse = True)
 		self.cromosomas = [cromosoma for score, cromosoma in poblacion_final[:self.tam_poblacion]]
+
+		scores_finales = [score for score, cromosoma in poblacion_final[:self.tam_poblacion]]
+		scores_finales = np.asarray(scores_finales)
+
+		self.mejor_fitness += [self.fitness(scores_finales[0])]
+		self.promedio_fitness += [self.fitness(np.mean(scores_finales))]
 
 		print("Generacion " + str(self.generaciones - generaciones + 1))
 
@@ -377,6 +395,12 @@ class ClasificadorAG(Clasificador):
 		poblacion_final.sort(reverse = True)
 		self.cromosomas = [cromosoma for score, cromosoma in poblacion_final[:self.tam_poblacion]]
 
+		scores_finales = [score for score, cromosoma in poblacion_final[:self.tam_poblacion]]
+		scores_finales = np.asarray(scores_finales)
+
+		self.mejor_fitness += [self.fitness(scores_finales[0])]
+		self.promedio_fitness += [self.fitness(np.mean(scores_finales))]
+
 		print("Generacion " + str(self.generaciones - generaciones + 1))
 
 		print("Time Run:", str(time() - start_time))
@@ -384,6 +408,60 @@ class ClasificadorAG(Clasificador):
 		print("Score: " + str(poblacion_final[0][0]*100/len(datostrain)) +"%")
 
 		return self.algotimo_genetico_binario(generaciones - 1, datostrain)
+
+
+#######################################################################################################################################################################
+
+#######		CLASIFICA		#################################################################################################################################
+
+#######################################################################################################################################################################
+
+
+	def clasifica(self, datostest, atributosDiscretos, diccionario):
+
+		resultado = []
+		for individuo in datostest:
+			clases = np.array([])
+			for regla in self.cromosomas[0]:
+				if self.binaria:
+					clase = self.predict_regla_binaria(regla, individuo)
+					clases = np.append(clases, clase)
+				else:
+					clase = self.predict_regla_entera(regla, individuo)
+					clases = np.append(clases, clase)
+
+			freqs = np.unique(clases, return_counts=True)
+
+			for i, counts in enumerate(freqs[1]):
+				if counts == np.max(freqs[1]):
+					pos = i
+
+			resultado += [freqs[0][pos]]
+
+		return resultado
+
+#######################################################################################################################################################################
+
+#######		FUNCIONES UTILES		#################################################################################################################################
+
+#######################################################################################################################################################################
+
+	###############################################################################
+	#
+	#	fitness: Devuelve el fitness de una puntuacion
+	#
+	###############################################################################
+
+
+	def fitness(self, score):
+
+		return score**2
+
+	###############################################################################
+	#
+	#	generar_gen: Devuelve un numero aleatorio entre 0 y k con una probabilidad de 0s en funcion de pz
+	#
+	###############################################################################
 
 
 	def generar_gen(self):
@@ -395,6 +473,12 @@ class ClasificadorAG(Clasificador):
 		else:
 			return randint(0, self.k)
 
+	###############################################################################
+	#
+	#	generar_bit: Devuelve 1 o 0 en funcion de pz
+	#
+	###############################################################################
+
 	def generar_bit(self):
 
 		umbral = uniform(0,1)
@@ -403,37 +487,6 @@ class ClasificadorAG(Clasificador):
 			return 0
 		else:
 			return 1
-
-		"""
-		dataset_ex = self.condiciones_excluyentes(datostrain)
-		print(dataset_ex[-5])
-		cromosomas = self.generar_cromosomas(datostrain)
-		print(cromosomas[-5])
-		genotipos = self.generar_genotipos(datostrain)
-		print(genotipos[-1])
-		print(self.k)
-
-		score = self.predict_entera(dataset_ex[-1], [dataset_ex[-1], dataset_ex[-5]])
-		score2 = self.predict_binaria(genotipos[-1], [cromosomas[-1], cromosomas[-5]])
-		print("Score 1: " + str(score) + " Score 2: " + str(score2))
-
-		cromosomas_ex = dataset_ex
-
-		i = 0
-		for cromosoma in cromosomas_ex:
-			score = self.predict_entera(cromosoma, dataset_ex)
-			score2 = self.predict_binaria(genotipos[i], cromosomas)
-			print("Score 1: " + str(score) + "Score 2: " + str(score2))
-			i += 1
-		"""
-
-
-		#print(self.predict_entera(cromosomas[0], cromosomas))
-
-
-
-	def clasifica(self, datostest, atributosDiscretos, diccionario):
-		pass
 
 
 	###############################################################################
@@ -459,27 +512,14 @@ class ClasificadorAG(Clasificador):
 			condiciones += [aux]
 
 		return condiciones
-	"""
-	def condiciones_no_excluyentes(self, datos):
 
-		condiciones = []
 
-		for individuo in datos:
-			i=0
-			aux = []
-			for atributo in individuo[:-1]:
-				ors = []
-				for intervalo in self.tablas[i]:
-					if (intervalo[1] <= atributo) and (atributo <= intervalo[2]):
-						ors += [1]
-					else:
-						ors += [0]
-				i += 1
-				aux += [ors]
-			aux += [int(individuo[-1])]
-			condiciones += [aux]
+	###############################################################################
+	#
+	#	condiciones_no_excluyentes: datos
+	#
+	###############################################################################
 
-		return condiciones"""
 
 	def condiciones_no_excluyentes(self, datos):
 
@@ -501,53 +541,6 @@ class ClasificadorAG(Clasificador):
 		return condiciones
 
 
-	# Genera los genotipos inicales del algoritmo mejorado
-	def generar_cromosomas(self, datos):
-
-		cromosomas = []
-
-		for individuo in datos:
-			i=0
-			cromosoma = []
-			for atributo in individuo[:-1]:
-				for intervalo in self.tablas[i]:
-					if (intervalo[1] <= atributo) and (atributo <= intervalo[2]):
-						cromosoma += [1]
-					else:
-						cromosoma += [0]
-				i += 1
-			cromosoma += [individuo[-1]]
-			cromosomas += [cromosoma]
-
-		return cromosomas
-
-	# Genera los genotipos inicales del algoritmo mejorado
-	def generar_genotipos(self, cromosomas):
-
-		genotipos = []
-
-		for cromosoma in cromosomas:
-
-			iterador = 0
-			genotipo = {}
-			gen_atributo = []
-
-			for tabla in self.tablas:
-				aux = {}
-				ors = []
-				for intervalo in tabla:
-					ors += [iterador]
-					iterador += 1
-
-				aux['or'] = ors
-				gen_atributo += [aux]
-
-			genotipo['and'] = gen_atributo
-			genotipo['clase'] = cromosoma[-1]
-			genotipos += [genotipo]
-
-		return genotipos
-
 
 	###############################################################################
 	#
@@ -568,7 +561,7 @@ class ClasificadorAG(Clasificador):
 
 	###############################################################################
 	#
-	#	predict_regla_binaria: regla, individuo_de_datos_excluyentes
+	#	predict_regla_binaria: regla, individuo_de_datos_no_excluyentes
 	#
 	###############################################################################
 
@@ -576,12 +569,15 @@ class ClasificadorAG(Clasificador):
 	def predict_regla_binaria(self, regla, individuo):
 
 		for i in range(self.num_atributos):
+			flag = 0
 			acc = 0
 			for j in range(self.k):
-				acc = (regla[i*self.k+j] and individuo[i*self.k+j]) or acc
-				if acc == 1:
-					break
-			if acc == 0:
+				if regla[i*self.k+j] == 1:
+					flag = 1
+					acc = individuo[i*self.k+j] or acc
+					if acc == 1:
+						break
+			if acc == 0 and flag == 1:
 				return regla[-1] ^ 1
 
 		return regla[-1]
@@ -725,6 +721,12 @@ class ClasificadorAG(Clasificador):
 		return mutado
 
 
+#######################################################################################################################################################################
+
+#######		Funciones que ya no se usan		#################################################################################################################################
+
+#######################################################################################################################################################################
+
 	def predict_binaria(self, genotipo, cromosomas):
 		
 		score = 0.0
@@ -762,3 +764,50 @@ class ClasificadorAG(Clasificador):
 		else:
 			print("resultado: " + str(resultado))
 			return resultado
+
+	# Genera los genotipos inicales del algoritmo mejorado
+	def generar_cromosomas(self, datos):
+
+		cromosomas = []
+
+		for individuo in datos:
+			i=0
+			cromosoma = []
+			for atributo in individuo[:-1]:
+				for intervalo in self.tablas[i]:
+					if (intervalo[1] <= atributo) and (atributo <= intervalo[2]):
+						cromosoma += [1]
+					else:
+						cromosoma += [0]
+				i += 1
+			cromosoma += [individuo[-1]]
+			cromosomas += [cromosoma]
+
+		return cromosomas
+
+	# Genera los genotipos inicales del algoritmo mejorado
+	def generar_genotipos(self, cromosomas):
+
+		genotipos = []
+
+		for cromosoma in cromosomas:
+
+			iterador = 0
+			genotipo = {}
+			gen_atributo = []
+
+			for tabla in self.tablas:
+				aux = {}
+				ors = []
+				for intervalo in tabla:
+					ors += [iterador]
+					iterador += 1
+
+				aux['or'] = ors
+				gen_atributo += [aux]
+
+			genotipo['and'] = gen_atributo
+			genotipo['clase'] = cromosoma[-1]
+			genotipos += [genotipo]
+
+		return genotipos
