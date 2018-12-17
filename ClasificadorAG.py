@@ -8,7 +8,7 @@ from random import shuffle
 
 class ClasificadorAG(Clasificador):
 
-	def __init__(self, tam_poblacion = 100, generaciones = 100, reglas_iniciales = 3, binaria = False, pc = 0.8, pz = 0.9):
+	def __init__(self, tam_poblacion = 100, generaciones = 100, reglas_iniciales = 3, binaria = False, pc = 0.8, pz = 0.9, ps = 0.75):
 		self.reglas = []
 		self.tablas = []
 		self.tam_poblacion = tam_poblacion
@@ -17,6 +17,7 @@ class ClasificadorAG(Clasificador):
 		self.binaria = binaria
 		self.pc = pc
 		self.pz = pz
+		self.ps = ps
 		self.mejor_fitness = []
 		self.promedio_fitness = []
 
@@ -50,8 +51,6 @@ class ClasificadorAG(Clasificador):
 			tabla = []
 			aux = []
 			acc = mincolumn
-
-			print("Min: " + str(mincolumn) + "      " + "Max: " + str(maxcolumn))
 
 			for idx in range(self.k):
 				if idx != (self.k-1):
@@ -151,7 +150,13 @@ class ClasificadorAG(Clasificador):
 		merged = seleccionados + cruzados + recombinados + mutados
 		poblacion_final = [(self.score_entera(cromosoma, self.condiciones_excluyentes(datostrain)), cromosoma) for cromosoma in merged]
 		poblacion_final.sort(reverse = True)
-		self.cromosomas = [cromosoma for score, cromosoma in poblacion_final[:self.tam_poblacion]]
+
+		cromosomas_seleccionados = int(self.tam_poblacion*self.ps)
+		cromosomas_no_seleccionados = self.tam_poblacion - cromosomas_seleccionados
+		self.cromosomas = [cromosoma for score, cromosoma in poblacion_final[:cromosomas_seleccionados]]
+
+		self.cromosomas += [[[self.generar_gen() for _ in range(self.num_atributos)] + [randint(0,1)] for _ in range(randint(1, self.reglas_iniciales))]for _ in range(cromosomas_no_seleccionados)]
+
 
 		scores_finales = [score for score, cromosoma in poblacion_final[:self.tam_poblacion]]
 		scores_finales = np.asarray(scores_finales)
@@ -167,167 +172,6 @@ class ClasificadorAG(Clasificador):
 
 		return self.algotimo_genetico_entero(generaciones - 1, datostrain)
 
-	def algotimo_genetico_entero2(self, generaciones, datostrain):
-
-		if generaciones == 0:
-			return
-
-		start_time = time()
-
-		# Evaluar
-
-		scores = [self.score_entera(cromosoma, self.condiciones_excluyentes(datostrain))**2 for cromosoma in self.cromosomas]
-
-		# Seleccionar
-
-		fitness = np.asarray(scores)
-		denominador = np.sum(fitness)
-		counts = 0
-		seleccionados = []
-
-		while counts < self.tam_poblacion:
-			index = randint(0, len(scores) - 1)
-			umbral = uniform(0, 1)
-			if umbral < (scores[index]/denominador):
-				seleccionados += [self.cromosomas[index]]
-				counts += 1
-
-		# Cruzar
-
-		cruzados = []
-
-		for seleccionado in seleccionados:
-			umbral = uniform(0, 1)
-			if umbral < self.pc:
-				cruzado = self.cruzar_punto(seleccionado, seleccionados, self.condiciones_excluyentes(datostrain), randint(1, self.num_atributos - 1))
-				if self.score_entera(seleccionado, self.condiciones_excluyentes(datostrain)) < self.score_entera(cruzado, self.condiciones_excluyentes(datostrain)):
-					cruzados += [cruzado]
-
-		reglas = []
-		for seleccionado in cruzados:
-			reglas += [regla for regla in seleccionado]
-
-		shuffle(reglas)
-
-		recombinados = []
-		i = 0
-		while i < len(reglas)-1:
-			n_group = randint(1, 3)
-			while (n_group + i) > len(reglas)-1:
-				n_group = randint(1, 3)
-			recombinados += [reglas[i:i+n_group]]
-			i += n_group
-
-		# Mutar
-
-		mutados = []
-
-		for seleccionado in cruzados:
-			mutado = self.mutar_entera(seleccionado)
-			if self.score_entera(seleccionado, self.condiciones_excluyentes(datostrain)) <= self.score_entera(mutado, self.condiciones_excluyentes(datostrain)):
-				mutados += [mutado]
-
-		# Repetir
-
-		merged = recombinados + cruzados + mutados
-		poblacion_final = [(self.score_entera(cromosoma, self.condiciones_excluyentes(datostrain)), cromosoma) for cromosoma in merged]
-		poblacion_final.sort(reverse = True)
-		self.cromosomas = [cromosoma for score, cromosoma in poblacion_final[:self.tam_poblacion]]
-
-		print("Generacion " + str(self.generaciones - generaciones + 1))
-
-		print("Time Run:", str(time() - start_time))
-
-		print("Score: " + str(poblacion_final[0][0]*100/len(datostrain)) +"%")
-
-		return self.algotimo_genetico_entero2(generaciones - 1, datostrain)
-
-	def algotimo_genetico_entero3(self, generaciones, datostrain):
-
-		if generaciones == 0:
-			return
-
-		start_time = time()
-
-		# Evaluar
-
-		scores = [self.score_entera(cromosoma, self.condiciones_excluyentes(datostrain))**2 for cromosoma in self.cromosomas]
-
-		# Seleccionar
-
-		fitness = np.asarray(scores)
-		denominador = np.sum(fitness)
-		counts = 0
-		seleccionados = []
-
-		while counts < self.tam_poblacion:
-			index = randint(0, len(scores) - 1)
-			umbral = uniform(0, 1)
-			if umbral < (scores[index]/denominador):
-				seleccionados += [self.cromosomas[index]]
-				counts += 1
-
-		# Cruzar
-
-		cruzados = []
-
-		for seleccionado in seleccionados:
-			umbral = uniform(0, 1)
-			if umbral < self.pc:
-				cruzado = self.cruzar_punto(seleccionado, seleccionados, self.condiciones_excluyentes(datostrain), randint(1, self.num_atributos - 1))
-				if self.score_entera(seleccionado, self.condiciones_excluyentes(datostrain)) < self.score_entera(cruzado, self.condiciones_excluyentes(datostrain)):
-					cruzados += [cruzado]
-
-		reglas = []
-		for seleccionado in cruzados:
-			reglas += [regla for regla in seleccionado]
-
-		shuffle(reglas)
-
-		recombinados = []
-		i = 0
-		while i < len(reglas)-1:
-			n_group = randint(1, 3)
-			while (n_group + i) > len(reglas)-1:
-				n_group = randint(1, 3)
-			recombinados += [reglas[i:i+n_group]]
-			i += n_group
-
-		# Mutar
-
-		mutados = []
-
-		for seleccionado in cruzados:
-			mutado = self.mutar_entera(seleccionado)
-			if self.score_entera(seleccionado, self.condiciones_excluyentes(datostrain)) <= self.score_entera(mutado, self.condiciones_excluyentes(datostrain)):
-				mutados += [mutado]
-
-		# Repetir
-
-		seleccionados = [(self.score_entera(cromosoma, self.condiciones_excluyentes(datostrain)), cromosoma) for cromosoma in seleccionados]
-		seleccionados.sort(reverse = True)
-		seleccionados_ganadores = [cromosoma for score, cromosoma in seleccionados]
-
-		index_seleccion = int(0.2*self.tam_poblacion)
-		merged = seleccionados_ganadores[:index_seleccion] + cruzados + recombinados + mutados
-
-		if len(merged) < self.tam_poblacion:
-			self.cromosomas = [[[self.generar_gen() for _ in range(self.num_atributos)] + [randint(0,1)] for _ in range(randint(1, self.reglas_iniciales))]for _ in range(self.tam_poblacion - len(merged))]
-
-		merged += self.cromosomas
-
-		poblacion_final = [(self.score_entera(cromosoma, self.condiciones_excluyentes(datostrain)), cromosoma) for cromosoma in merged]
-		poblacion_final.sort(reverse = True)
-		self.cromosomas = [cromosoma for score, cromosoma in poblacion_final[:self.tam_poblacion]]
-
-		print("Generacion " + str(self.generaciones - generaciones + 1))
-
-		print("Time Run:", str(time() - start_time))
-
-		print("Score: " + str(poblacion_final[0][0]*100/len(datostrain)) +"%")
-
-		return self.algotimo_genetico_entero3(generaciones - 1, datostrain)
-
 	def algotimo_genetico_binario(self, generaciones, datostrain):
 
 		if generaciones == 0:
@@ -337,7 +181,7 @@ class ClasificadorAG(Clasificador):
 
 		# Evaluar
 
-		scores = [self.score_binaria(cromosoma, self.condiciones_no_excluyentes(datostrain))**2 for cromosoma in self.cromosomas]
+		scores = [self.fitness(self.score_binaria(cromosoma, self.condiciones_no_excluyentes(datostrain))) for cromosoma in self.cromosomas]
 
 		# Seleccionar
 
@@ -384,7 +228,7 @@ class ClasificadorAG(Clasificador):
 		mutados = []
 
 		for seleccionado in seleccionados:
-			mutado = self.mutar_binaria(seleccionado)
+			mutado = self.mutar_entera(seleccionado)
 			if self.score_binaria(seleccionado, self.condiciones_no_excluyentes(datostrain)) <= self.score_binaria(mutado, self.condiciones_no_excluyentes(datostrain)):
 				mutados += [mutado]
 
@@ -393,7 +237,13 @@ class ClasificadorAG(Clasificador):
 		merged = seleccionados + cruzados + recombinados + mutados
 		poblacion_final = [(self.score_binaria(cromosoma, self.condiciones_no_excluyentes(datostrain)), cromosoma) for cromosoma in merged]
 		poblacion_final.sort(reverse = True)
-		self.cromosomas = [cromosoma for score, cromosoma in poblacion_final[:self.tam_poblacion]]
+
+		cromosomas_seleccionados = int(self.tam_poblacion*self.ps)
+		cromosomas_no_seleccionados = self.tam_poblacion - cromosomas_seleccionados
+		self.cromosomas = [cromosoma for score, cromosoma in poblacion_final[:cromosomas_seleccionados]]
+
+		self.cromosomas += [[[self.generar_bit() for _ in range(self.num_atributos*self.k)] + [randint(0,1)] for _ in range(randint(1, self.reglas_iniciales))]for _ in range(cromosomas_no_seleccionados)]
+
 
 		scores_finales = [score for score, cromosoma in poblacion_final[:self.tam_poblacion]]
 		scores_finales = np.asarray(scores_finales)
@@ -408,7 +258,6 @@ class ClasificadorAG(Clasificador):
 		print("Score: " + str(poblacion_final[0][0]*100/len(datostrain)) +"%")
 
 		return self.algotimo_genetico_binario(generaciones - 1, datostrain)
-
 
 #######################################################################################################################################################################
 
