@@ -60,9 +60,7 @@ class ClasificadorAG(Clasificador):
 
 			# Poblar
 
-			self.cromosomas = [[[[self.generar_bit() for _ in range(self.k)] for _ in range(self.num_atributos)] + [randint(0,1)] for _ in range(randint(1, self.reglas_iniciales))]for _ in range(self.tam_poblacion)]
-
-			print(self.cromosomas[-1])
+			self.cromosomas = [[[ self.generar_bit() for _ in range(self.num_atributos*self.k)] + [randint(0,1)] for _ in range(randint(1, self.reglas_iniciales))]for _ in range(self.tam_poblacion)]
 
 			return self.algotimo_genetico_binario(self.generaciones, datostrain)
 
@@ -108,7 +106,7 @@ class ClasificadorAG(Clasificador):
 		for seleccionado in seleccionados:
 			umbral = uniform(0, 1)
 			if umbral < self.pc:
-				cruzado = self.cruzar_punto(seleccionado, seleccionados, datostrain, randint(1, self.num_atributos - 1))
+				cruzado = self.cruzar_punto(seleccionado, seleccionados, self.condiciones_excluyentes(datostrain), randint(1, self.num_atributos - 1))
 				if self.score_entera(seleccionado, self.condiciones_excluyentes(datostrain)) < self.score_entera(cruzado, self.condiciones_excluyentes(datostrain)):
 					cruzados += [cruzado]
 
@@ -132,7 +130,7 @@ class ClasificadorAG(Clasificador):
 		mutados = []
 
 		for seleccionado in seleccionados:
-			mutado = self.mutar(seleccionado)
+			mutado = self.mutar_entera(seleccionado)
 			if self.score_entera(seleccionado, self.condiciones_excluyentes(datostrain)) <= self.score_entera(mutado, self.condiciones_excluyentes(datostrain)):
 				mutados += [mutado]
 
@@ -183,7 +181,7 @@ class ClasificadorAG(Clasificador):
 		for seleccionado in seleccionados:
 			umbral = uniform(0, 1)
 			if umbral < self.pc:
-				cruzado = self.cruzar_punto(seleccionado, seleccionados, datostrain, randint(1, self.num_atributos - 1))
+				cruzado = self.cruzar_punto(seleccionado, seleccionados, self.condiciones_excluyentes(datostrain), randint(1, self.num_atributos - 1))
 				if self.score_entera(seleccionado, self.condiciones_excluyentes(datostrain)) < self.score_entera(cruzado, self.condiciones_excluyentes(datostrain)):
 					cruzados += [cruzado]
 
@@ -207,7 +205,7 @@ class ClasificadorAG(Clasificador):
 		mutados = []
 
 		for seleccionado in cruzados:
-			mutado = self.mutar(seleccionado)
+			mutado = self.mutar_entera(seleccionado)
 			if self.score_entera(seleccionado, self.condiciones_excluyentes(datostrain)) <= self.score_entera(mutado, self.condiciones_excluyentes(datostrain)):
 				mutados += [mutado]
 
@@ -258,7 +256,7 @@ class ClasificadorAG(Clasificador):
 		for seleccionado in seleccionados:
 			umbral = uniform(0, 1)
 			if umbral < self.pc:
-				cruzado = self.cruzar_punto(seleccionado, seleccionados, datostrain, randint(1, self.num_atributos - 1))
+				cruzado = self.cruzar_punto(seleccionado, seleccionados, self.condiciones_excluyentes(datostrain), randint(1, self.num_atributos - 1))
 				if self.score_entera(seleccionado, self.condiciones_excluyentes(datostrain)) < self.score_entera(cruzado, self.condiciones_excluyentes(datostrain)):
 					cruzados += [cruzado]
 
@@ -282,7 +280,7 @@ class ClasificadorAG(Clasificador):
 		mutados = []
 
 		for seleccionado in cruzados:
-			mutado = self.mutar(seleccionado)
+			mutado = self.mutar_entera(seleccionado)
 			if self.score_entera(seleccionado, self.condiciones_excluyentes(datostrain)) <= self.score_entera(mutado, self.condiciones_excluyentes(datostrain)):
 				mutados += [mutado]
 
@@ -319,8 +317,6 @@ class ClasificadorAG(Clasificador):
 
 		start_time = time()
 
-		print(self.condiciones_no_excluyentes(datostrain)[-1])
-
 		# Evaluar
 
 		scores = [self.score_binaria(cromosoma, self.condiciones_no_excluyentes(datostrain))**2 for cromosoma in self.cromosomas]
@@ -346,7 +342,7 @@ class ClasificadorAG(Clasificador):
 		for seleccionado in seleccionados:
 			umbral = uniform(0, 1)
 			if umbral < self.pc:
-				cruzado = self.cruzar_punto(seleccionado, seleccionados, datostrain, randint(1, self.num_atributos - 1))
+				cruzado = self.cruzar_punto(seleccionado, seleccionados, self.condiciones_no_excluyentes(datostrain), randint(1, self.num_atributos - 1), entera = False)
 				if self.score_binaria(seleccionado, self.condiciones_no_excluyentes(datostrain)) < self.score_binaria(cruzado, self.condiciones_no_excluyentes(datostrain)):
 					cruzados += [cruzado]
 
@@ -370,7 +366,7 @@ class ClasificadorAG(Clasificador):
 		mutados = []
 
 		for seleccionado in seleccionados:
-			mutado = self.mutar(seleccionado)
+			mutado = self.mutar_binaria(seleccionado)
 			if self.score_binaria(seleccionado, self.condiciones_no_excluyentes(datostrain)) <= self.score_binaria(mutado, self.condiciones_no_excluyentes(datostrain)):
 				mutados += [mutado]
 
@@ -463,7 +459,7 @@ class ClasificadorAG(Clasificador):
 			condiciones += [aux]
 
 		return condiciones
-
+	"""
 	def condiciones_no_excluyentes(self, datos):
 
 		condiciones = []
@@ -483,7 +479,27 @@ class ClasificadorAG(Clasificador):
 			aux += [int(individuo[-1])]
 			condiciones += [aux]
 
+		return condiciones"""
+
+	def condiciones_no_excluyentes(self, datos):
+
+		condiciones = []
+
+		for individuo in datos:
+			i=0
+			aux = []
+			for atributo in individuo[:-1]:
+				for intervalo in self.tablas[i]:
+					if (intervalo[1] <= atributo) and (atributo <= intervalo[2]):
+						aux += [1]
+					else:
+						aux += [0]
+				i += 1
+			aux += [int(individuo[-1])]
+			condiciones += [aux]
+
 		return condiciones
+
 
 	# Genera los genotipos inicales del algoritmo mejorado
 	def generar_cromosomas(self, datos):
@@ -552,24 +568,24 @@ class ClasificadorAG(Clasificador):
 
 	###############################################################################
 	#
-	#	predict_regla_entera: regla, individuo_de_datos_excluyentes
+	#	predict_regla_binaria: regla, individuo_de_datos_excluyentes
 	#
 	###############################################################################
 
+
 	def predict_regla_binaria(self, regla, individuo):
 
-		i = 0
-
-		for atributo in regla[:-1]:
-			j = 0
-			for bit in atributo:		
-				if bit != 0:
-					if bit != individuo[i][j]:
-						return regla[-1] ^ 1
-				j += 1
-			i += 1
+		for i in range(self.num_atributos):
+			acc = 0
+			for j in range(self.k):
+				acc = (regla[i*self.k+j] and individuo[i*self.k+j]) or acc
+				if acc == 1:
+					break
+			if acc == 0:
+				return regla[-1] ^ 1
 
 		return regla[-1]
+
 
 	###############################################################################
 	#
@@ -602,7 +618,7 @@ class ClasificadorAG(Clasificador):
 
 	###############################################################################
 	#
-	#	score_entera: cromosoma, datos_excluyentes
+	#	score_binaria: cromosoma, datos_no_excluyentes
 	#
 	###############################################################################
 
@@ -629,7 +645,7 @@ class ClasificadorAG(Clasificador):
 
 		return score
 
-	def cruzar_punto(self, seleccionado, seleccionados, datos, punto):
+	def cruzar_punto(self, seleccionado, seleccionados, datos, punto, entera = True):
 
 		scores = []
 		n_reglas = len(seleccionado)
@@ -640,8 +656,13 @@ class ClasificadorAG(Clasificador):
 			for regla2 in cromosoma:
 				aux1 = regla[:punto] + regla2[punto:]
 				aux2 = regla2[:punto] + regla[punto:]
-				score = self.score_entera([aux1], datos)
-				score2 = self.score_entera([aux2], datos)
+				if entera:
+					score = self.score_entera([aux1], datos)
+					score2 = self.score_entera([aux2], datos)
+				else:
+					score = self.score_binaria([aux1], datos)
+					score2 = self.score_binaria([aux2], datos)
+
 				if score < score2:
 					scores += [(score2, aux2)]
 				else:
@@ -655,33 +676,14 @@ class ClasificadorAG(Clasificador):
 
 		return resultado
 
-	def cruzar_punto(self, seleccionado, seleccionados, datos, punto):
 
-		scores = []
-		n_reglas = len(seleccionado)
+	###############################################################################
+	#
+	#	mutar_entera: cromosoma_entero
+	#
+	###############################################################################
 
-		cromosoma = seleccionados[randint(0, len(seleccionados)-1)]
-
-		for regla in seleccionado:
-			for regla2 in cromosoma:
-				aux1 = regla[:punto] + regla2[punto:]
-				aux2 = regla2[:punto] + regla[punto:]
-				score = self.score_entera([aux1], datos)
-				score2 = self.score_entera([aux2], datos)
-				if score < score2:
-					scores += [(score2, aux2)]
-				else:
-					scores += [(score, aux1)]
-
-		resultado = []
-		for _ in range(n_reglas):
-			score, regla = max((score, regla) for score, regla in scores)
-			resultado += [regla]
-			scores.remove((score, regla))
-
-		return resultado
-
-	def mutar(self, seleccionado):
+	def mutar_entera(self, seleccionado):
 
 		mutado = []
 
@@ -694,6 +696,28 @@ class ClasificadorAG(Clasificador):
 					while gen == gen_mutado:
 						gen_mutado = randint(0, self.k)
 					gen = gen_mutado
+				regla_mutada += [gen]
+			regla_mutada += [regla[-1]]
+			mutado = [regla_mutada]
+
+		return mutado
+
+	###############################################################################
+	#
+	#	mutar_binaria: cromosoma_binario
+	#
+	###############################################################################
+
+	def mutar_binaria(self, seleccionado):
+
+		mutado = []
+
+		for regla in seleccionado:
+			regla_mutada = []
+			for gen in regla[:-1]:
+				umbral = uniform(0, 1)
+				if umbral < self.pm:
+					gen = gen ^ 1
 				regla_mutada += [gen]
 			regla_mutada += [regla[-1]]
 			mutado = [regla_mutada]
